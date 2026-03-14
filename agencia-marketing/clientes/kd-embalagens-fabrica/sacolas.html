@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sacolas Kraft - K&D Embalagens</title>
+    <script src="./catalog-utils.js" defer></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background-color: #0d0d0d;
+            color: #fff;
+            text-align: center;
+        }
+
+        .header {
+            background: #000;
+            color: #d4af37;
+            padding: 30px;
+            font-size: 28px;
+            font-weight: bold;
+            border-bottom: 3px solid #d4af37;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .container {
+            padding: 15px;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .info-box {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #d4af37;
+            text-align: left;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+
+        .category {
+            color: #d4af37;
+            font-size: 22px;
+            margin: 35px 0 10px;
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 25px;
+            border: 1px solid #222;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            border: 1px solid #333;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #222;
+            color: #d4af37;
+        }
+
+        .promo {
+            background: #2d2d00;
+            color: #fff700;
+            font-weight: bold;
+        }
+
+        .btn-gold {
+            display: block;
+            background: linear-gradient(145deg, #d4af37, #aa8a2e);
+            color: #000;
+            padding: 16px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 10px;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .badge {
+            background: #d4af37;
+            color: #000;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: inline-block;
+        }
+    </style>
+    <!-- Meta Pixel Code -->
+    <script>
+        !function (f, b, e, v, n, t, s) {
+            if (f.fbq) return; n = f.fbq = function () {
+                n.callMethod ?
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = []; t = b.createElement(e); t.async = !0;
+            t.src = v; s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1353721879855670');
+        fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1353721879855670&ev=PageView&noscript=1" /></noscript>
+    <!-- End Meta Pixel Code -->
+    <script>
+        function zap(prod) {
+            const msg = `Olá Jeferson! Vi o catálogo e quero o orçamento de Milheiro para ${prod}.`;
+            window.KDCatalog.openWhatsApp(msg, {
+                eventName: 'Lead',
+                eventData: { content_name: prod, content_category: 'Catalogo Sacolas' }
+            });
+        }
+    </script>
+</head>
+
+<body>
+    <div class="header">🛍️ SACOLAS KRAFT - K&D</div>
+    <div class="container">
+        <div class="info-box">
+            💎 <b>CONDIÇÕES ESPECIAIS (JEFERSON):</b><br>
+            ✅ <b>A PARTIR DE 250 UNID:</b> LOGO + FRETE GRÁTIS (Manaus)<br>
+            ❌ <b>ABAIXO DE 250 UNID:</b> TAXA DE TELA R$ 90 + FRETE<br>
+            ⏱️ <b>PRAZO DE PRODUÇÃO:</b> 7 DIAS ÚTEIS
+        </div>
+
+        <div class="card">
+            <span class="badge">ÚNICO QUE É COLORIDO</span>
+            <h3>Sacolas Kraft Personalizadas</h3>
+            <p style="color:#aaa;font-size:12px;margin:4px 0 12px;">Fundo reforçado | Personalizável com sua logo</p>
+            <table>
+                <tr>
+                    <th>Modelo</th>
+                    <th>Medidas</th>
+                    <th class="promo">Preço/un (milheiro)</th>
+                </tr>
+                <tr>
+                    <td><b>No1</b></td>
+                    <td>28x20x10 cm</td>
+                    <td class="promo">R$ 1,20</td>
+                </tr>
+                <tr>
+                    <td><b>No2</b></td>
+                    <td>34x22,5x15 cm</td>
+                    <td class="promo">R$ 1,40</td>
+                </tr>
+                <tr>
+                    <td><b>No3</b></td>
+                    <td>35x21x21 cm</td>
+                    <td class="promo">R$ 1,45</td>
+                </tr>
+                <tr>
+                    <td><b>No4</b></td>
+                    <td>28x32x15 cm</td>
+                    <td class="promo">R$ 1,50</td>
+                </tr>
+            </table>
+            <p style="color:#aaa;font-size:11px;margin-top:8px;">* Preços para pedidos a partir de 250 unidades com logo
+                inclusa</p>
+            <button class="btn-gold" onclick="zap('Sacolas Kraft')">💬 TIRAR DÚVIDAS NO WHATSAPP</button>
+        </div>
+    </div>
+</body>
+
+</html>
