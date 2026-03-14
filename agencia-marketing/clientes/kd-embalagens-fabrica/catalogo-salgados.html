@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orçamento Salgados - K&D Embalagens</title>
+    <script src="./catalog-utils.js" defer></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #1a1a1a; color: #fff; text-align: center; }
+        .header { background: linear-gradient(145deg, #000, #333); color: #d4af37; padding: 30px; font-weight: bold; font-size: 28px; border-bottom: 3px solid #d4af37; }
+        .container { padding: 20px; max-width: 500px; margin: auto; }
+        .product-card { background: #262626; border-radius: 15px; padding: 20px; margin-bottom: 25px; border: 1px solid #444; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .price-table { width: 100%; border-collapse: collapse; margin: 20px 0; background: #333; color: #fff; border-radius: 10px; overflow: hidden; }
+        .price-table th, .price-table td { padding: 12px; border: 1px solid #444; }
+        .price-table th { background-color: #444; color: #d4af37; }
+        .highlight { background-color: #3e3e00; color: #fff700; font-weight: bold; }
+        .btn { display: block; background-color: #25d366; color: white; padding: 18px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-bottom: 12px; cursor: pointer; border: none; width: 100%; font-size: 18px; transition: 0.3s; }
+        .btn-gold { background: linear-gradient(145deg, #d4af37, #aa8a2e); color: #000; box-shadow: 0 4px 15px rgba(212,175,55,0.4); }
+        .info-box { background: #333; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; border-left: 5px solid #25d366; text-align: left; }
+        .tag { display: inline-block; background: #d4af37; color: #000; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+    </style>
+    <script>
+        function trackOrder(tier, price) {
+            const message = `Olá Jeferson! Vi o catálogo e quero o pacote de ${tier} unidades de Caixas de Salgado.`;
+            window.KDCatalog.openWhatsApp(message, {
+                eventName: 'AddToCart',
+                eventData: {
+                    content_name: 'Caixas de Salgado',
+                    content_category: 'Catalogo Salgados',
+                    value: price,
+                    currency: 'BRL'
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+    <div class="header">K&D EMBALAGENS</div>
+    <div class="container">
+        <div class="product-card">
+            <span class="tag">OFERTA DE FÁBRICA - MANAUS</span>
+            <h2>📦 Caixas para Salgados</h2>
+            <p style="color: #bbb;">Personalização Profissional em Serigrafia (1 Cor)</p>
+            
+            <div class="info-box">
+                ✅ <b>LOGO GRÁTIS</b> (Acima de 250 un)<br>
+                ✅ <b>FRETE GRÁTIS</b> (Manaus - Acima de 250 un)<br>
+                ⏱️ <b>PRAZO:</b> 7 Dias Úteis
+            </div>
+
+            <table class="price-table">
+                <tr><th>Qtd</th><th>Unit.</th><th>Benefício</th></tr>
+                <tr><td>100 un</td><td>R$ 2,50</td><td>+ R$ 90 Tela</td></tr>
+                <tr class="highlight"><td>250 un</td><td>R$ 2,35</td><td>LOGO + FRETE GRÁTIS</td></tr>
+                <tr class="highlight"><td>500 un</td><td>R$ 2,25</td><td>LOGO + FRETE GRÁTIS</td></tr>
+                <tr class="highlight"><td>1.000 un</td><td>R$ 2,15</td><td>MELHOR PREÇO</td></tr>
+            </table>
+
+            <button class="btn btn-gold" onclick="trackOrder('1.000', 2150.00)">🚀 QUERO 1.000 UNIDADES (OFERTA VIP)</button>
+            <button class="btn" onclick="trackOrder('250 ou 500', 0)">FALAR COM JEFERSON (250/500 UNID)</button>
+        </div>
+    </div>
+</body>
+</html>
