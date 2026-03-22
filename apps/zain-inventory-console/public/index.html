@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zain Inventory Console</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Projeto novo</p>
+        <h1>Zain Inventory Console</h1>
+        <p class="lede">
+          MVP local para importar estoque e vendas do ERP, consolidar por codigo do produto e validar a leitura gerencial.
+        </p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <p class="eyebrow">Importacao</p>
+          <h2>Entradas do ERP</h2>
+          <div class="upload-grid">
+            <label class="upload-card">
+              <span>Planilha de estoque</span>
+              <input id="stockFile" type="file" accept=".xlsx,.xls,.csv" />
+              <small>Campos esperados: codigo, SKU, nome, marca, estoque, reserva, minimo.</small>
+            </label>
+            <label class="upload-card">
+              <span>Planilha de vendas</span>
+              <input id="salesFile" type="file" accept=".xlsx,.xls,.csv" />
+              <small>Campos esperados: data, codigo, descricao, quantidade, valor.</small>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="processButton" class="button button-primary" type="button">Processar planilhas</button>
+            <button id="clearButton" class="button button-secondary" type="button">Limpar</button>
+          </div>
+          <p id="messageBox" class="message info">
+            Envie as duas planilhas em `.xlsx` ou `.csv` e clique em processar.
+          </p>
+        </article>
+
+        <article class="card">
+          <p class="eyebrow">Leitura do periodo</p>
+          <h2>Escopo da analise</h2>
+          <div class="status-stack">
+            <div><span>Chave principal</span><strong>Codigo do produto</strong></div>
+            <div><span>Janela de analise</span><strong id="monthsLabel">Ultimos 3 meses</strong></div>
+            <div><span>Projecao</span><strong>Dias uteis</strong></div>
+            <div><span>Modo</span><strong>Local e manual</strong></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="kpi-grid">
+        <article class="kpi-card">
+          <span>Produtos</span>
+          <strong id="kpiProducts">0</strong>
+        </article>
+        <article class="kpi-card">
+          <span>Estoque total</span>
+          <strong id="kpiStock">0</strong>
+        </article>
+        <article class="kpi-card">
+          <span>Vendas do mes</span>
+          <strong id="kpiCurrentSales">0</strong>
+        </article>
+        <article class="kpi-card accent">
+          <span>Projecao do mes</span>
+          <strong id="kpiProjection">0</strong>
+        </article>
+        <article class="kpi-card danger">
+          <span>Sem estoque</span>
+          <strong id="kpiNoStock">0</strong>
+        </article>
+        <article class="kpi-card warning">
+          <span>Estoque baixo</span>
+          <strong id="kpiLowStock">0</strong>
+        </article>
+      </section>
+
+      <section class="card card-wide">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Base consolidada</p>
+            <h2>Tabela gerencial inicial</h2>
+          </div>
+          <p class="table-hint">A tabela mostra estoque, ultimos 3 meses, media, projecao, cobertura e necessidade.</p>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead id="tableHead">
+              <tr>
+                <th>Codigo</th>
+                <th>SKU</th>
+                <th>Produto</th>
+                <th>Marca</th>
+                <th>Estoque</th>
+                <th>Reserva</th>
+                <th>Disponivel</th>
+                <th id="monthHeader0">M-2</th>
+                <th id="monthHeader1">M-1</th>
+                <th id="monthHeader2">Mes atual</th>
+                <th>Projecao</th>
+                <th>Media 3m</th>
+                <th>Cobertura</th>
+                <th>Necessidade</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <tr>
+                <td colspan="15" class="empty-state">Nenhuma leitura consolidada ainda.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

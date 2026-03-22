@@ -1,0 +1,513 @@
+const state = {
+  stockRows: [],
+  salesRows: [],
+  products: []
+};
+
+const elements = {
+  stockFile: document.getElementById('stockFile'),
+  salesFile: document.getElementById('salesFile'),
+  processButton: document.getElementById('processButton'),
+  clearButton: document.getElementById('clearButton'),
+  messageBox: document.getElementById('messageBox'),
+  tableBody: document.getElementById('tableBody'),
+  monthHeader0: document.getElementById('monthHeader0'),
+  monthHeader1: document.getElementById('monthHeader1'),
+  monthHeader2: document.getElementById('monthHeader2'),
+  monthsLabel: document.getElementById('monthsLabel'),
+  kpiProducts: document.getElementById('kpiProducts'),
+  kpiStock: document.getElementById('kpiStock'),
+  kpiCurrentSales: document.getElementById('kpiCurrentSales'),
+  kpiProjection: document.getElementById('kpiProjection'),
+  kpiNoStock: document.getElementById('kpiNoStock'),
+  kpiLowStock: document.getElementById('kpiLowStock')
+};
+
+const MONTH_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+  month: 'short',
+  year: '2-digit'
+});
+
+const NUMBER_FORMATTER = new Intl.NumberFormat('pt-BR', {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 0
+});
+
+function normalizeKey(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function toNumber(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const normalized = String(value || '')
+    .trim()
+    .replace(/\s/g, '')
+    .replace(/\.(?=\d{3}(?:\D|$))/g, '')
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '');
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+
+  if (typeof value === 'number' && window.XLSX) {
+    const converted = window.XLSX.SSF.parse_date_code(value);
+    if (converted) {
+      return new Date(converted.y, converted.m - 1, converted.d);
+    }
+  }
+
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return null;
+  }
+
+  const brMatch = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})$/);
+  if (brMatch) {
+    const year = brMatch[3].length === 2 ? `20${brMatch[3]}` : brMatch[3];
+    return new Date(Number(year), Number(brMatch[2]) - 1, Number(brMatch[1]));
+  }
+
+  const iso = new Date(raw);
+  return Number.isNaN(iso.getTime()) ? null : iso;
+}
+
+function getWorkdaysInMonth(referenceDate) {
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth();
+  const today = new Date();
+  let elapsed = 0;
+  let total = 0;
+
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  for (let day = 1; day <= lastDay; day += 1) {
+    const current = new Date(year, month, day);
+    const weekDay = current.getDay();
+    const isWorkday = weekDay !== 0 && weekDay !== 6;
+
+    if (isWorkday) {
+      total += 1;
+      if (current <= today) {
+        elapsed += 1;
+      }
+    }
+  }
+
+  return {
+    elapsed: Math.max(elapsed, 1),
+    total: Math.max(total, 1)
+  };
+}
+
+function getMonthBuckets() {
+  const now = new Date();
+  const current = new Date(now.getFullYear(), now.getMonth(), 1);
+  const previous = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const previousTwo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+  return [previousTwo, previous, current];
+}
+
+function formatMonthLabel(date) {
+  return MONTH_FORMATTER.format(date).replace('.', '');
+}
+
+function getHeaderMap(row) {
+  const map = new Map();
+  Object.keys(row || {}).forEach((key) => {
+    map.set(normalizeKey(key), key);
+  });
+  return map;
+}
+
+function findValue(row, aliases) {
+  const headerMap = getHeaderMap(row);
+  for (const alias of aliases) {
+    const resolved = headerMap.get(normalizeKey(alias));
+    if (resolved) {
+      return row[resolved];
+    }
+  }
+  return '';
+}
+
+async function readFileRows(file) {
+  const extension = file.name.split('.').pop().toLowerCase();
+
+  if (extension === 'csv') {
+    const text = await file.text();
+    return parseCsv(text);
+  }
+
+  const buffer = await file.arrayBuffer();
+  const workbook = window.XLSX.read(buffer, { type: 'array' });
+  const firstSheet = workbook.SheetNames[0];
+  return window.XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' });
+}
+
+function parseCsv(text) {
+  const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  if (!lines.length) {
+    return [];
+  }
+
+  const delimiter = detectDelimiter(lines[0]);
+  const headers = splitCsvLine(lines[0], delimiter);
+
+  return lines.slice(1).map((line) => {
+    const values = splitCsvLine(line, delimiter);
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    return row;
+  });
+}
+
+function detectDelimiter(line) {
+  if (line.includes(';')) {
+    return ';';
+  }
+  if (line.includes('\t')) {
+    return '\t';
+  }
+  return ',';
+}
+
+function splitCsvLine(line, delimiter) {
+  if (delimiter === '\t') {
+    return line.split('\t').map((part) => part.trim());
+  }
+
+  const values = [];
+  let current = '';
+  let quoted = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    if (char === '"') {
+      if (quoted && line[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+      continue;
+    }
+
+    if (char === delimiter && !quoted) {
+      values.push(current.trim());
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+function parseStockRows(rows) {
+  return rows
+    .map((row) => {
+      const code = String(findValue(row, ['codigo do produto', 'codigo', 'codigodoproduto', 'codproduto', 'id'])).trim();
+      if (!code) {
+        return null;
+      }
+
+      return {
+        code,
+        sku: String(findValue(row, ['sku', 'referencia'])).trim(),
+        name: String(findValue(row, ['nome', 'nome do produto', 'descricao', 'produto'])).trim(),
+        brand: String(findValue(row, ['marca', 'fabricante'])).trim(),
+        group: String(findValue(row, ['grupo'])).trim(),
+        subgroup: String(findValue(row, ['subgrupo'])).trim(),
+        currentStock: toNumber(findValue(row, ['estoque atual', 'estoque fisico', 'estoque', 'saldo'])),
+        reservedStock: toNumber(findValue(row, ['reserva', 'estoque reservado', 'reservado'])),
+        minimumStock: toNumber(findValue(row, ['estoque minimo', 'minimo'])),
+        cost: toNumber(findValue(row, ['valor de custo', 'custo unitario', 'custo'])),
+        price: toNumber(findValue(row, ['preco unitario', 'valor de venda', 'preco', 'valor'])),
+        averageSalesHint: toNumber(findValue(row, ['media de venda 3 meses', 'media de venda', 'media 3 meses']))
+      };
+    })
+    .filter(Boolean);
+}
+
+function parseSalesRows(rows) {
+  return rows
+    .map((row) => {
+      const code = String(findValue(row, ['codigo do produto', 'codigo', 'codproduto', 'produto codigo'])).trim();
+      const date = parseDate(findValue(row, ['data', 'data da venda', 'emissao']));
+      if (!code || !date) {
+        return null;
+      }
+
+      return {
+        code,
+        name: String(findValue(row, ['descricao', 'produto', 'nome'])).trim(),
+        brand: String(findValue(row, ['marca'])).trim(),
+        group: String(findValue(row, ['grupo'])).trim(),
+        subgroup: String(findValue(row, ['subgrupo'])).trim(),
+        quantity: toNumber(findValue(row, ['quantidade', 'quant.', 'qtd', 'qtdvendida'])),
+        value: toNumber(findValue(row, ['valor', 'total', 'valor vendido'])),
+        date
+      };
+    })
+    .filter(Boolean);
+}
+
+function consolidateProducts(stockRows, salesRows) {
+  const monthBuckets = getMonthBuckets();
+  const monthKeys = monthBuckets.map((date) => `${date.getFullYear()}-${date.getMonth()}`);
+  const currentBucket = monthBuckets[2];
+  const workdays = getWorkdaysInMonth(currentBucket);
+  const productMap = new Map();
+
+  stockRows.forEach((row) => {
+    productMap.set(row.code, {
+      code: row.code,
+      sku: row.sku,
+      name: row.name,
+      brand: row.brand,
+      group: row.group,
+      subgroup: row.subgroup,
+      currentStock: row.currentStock,
+      reservedStock: row.reservedStock,
+      availableStock: row.currentStock - row.reservedStock,
+      minimumStock: row.minimumStock,
+      cost: row.cost,
+      price: row.price,
+      monthlySales: [0, 0, 0],
+      monthlyRevenue: [0, 0, 0],
+      averageSalesHint: row.averageSalesHint
+    });
+  });
+
+  salesRows.forEach((row) => {
+    const bucketKey = `${row.date.getFullYear()}-${row.date.getMonth()}`;
+    const monthIndex = monthKeys.indexOf(bucketKey);
+    if (monthIndex === -1) {
+      return;
+    }
+
+    const existing = productMap.get(row.code) || {
+      code: row.code,
+      sku: '',
+      name: row.name,
+      brand: row.brand,
+      group: row.group,
+      subgroup: row.subgroup,
+      currentStock: 0,
+      reservedStock: 0,
+      availableStock: 0,
+      minimumStock: 0,
+      cost: 0,
+      price: 0,
+      monthlySales: [0, 0, 0],
+      monthlyRevenue: [0, 0, 0],
+      averageSalesHint: 0
+    };
+
+    existing.monthlySales[monthIndex] += row.quantity;
+    existing.monthlyRevenue[monthIndex] += row.value;
+    existing.name = existing.name || row.name;
+    existing.brand = existing.brand || row.brand;
+    existing.group = existing.group || row.group;
+    existing.subgroup = existing.subgroup || row.subgroup;
+
+    productMap.set(row.code, existing);
+  });
+
+  return Array.from(productMap.values())
+    .map((product) => {
+      const averageSales = product.averageSalesHint || average(product.monthlySales);
+      const currentMonthSales = product.monthlySales[2];
+      const projection = (currentMonthSales / workdays.elapsed) * workdays.total;
+      const coverage = averageSales > 0 ? product.availableStock / averageSales : 0;
+      const need = Math.max(0, projection + product.minimumStock - product.availableStock);
+      const status = classifyStock(product.availableStock, product.minimumStock, coverage, projection);
+
+      return {
+        ...product,
+        projection,
+        averageSales,
+        coverage,
+        need,
+        status
+      };
+    })
+    .sort((left, right) => right.projection - left.projection);
+}
+
+function average(values) {
+  const total = values.reduce((sum, current) => sum + current, 0);
+  return values.length ? total / values.length : 0;
+}
+
+function classifyStock(availableStock, minimumStock, coverage, projection) {
+  if (availableStock <= 0) {
+    return 'Sem estoque';
+  }
+  if (availableStock < minimumStock) {
+    return 'Estoque baixo';
+  }
+  if (projection > 0 && coverage > 0 && coverage < 0.5) {
+    return 'Estoque critico';
+  }
+  if (projection > 0 && availableStock > projection * 2) {
+    return 'Estoque alto';
+  }
+  return 'Estoque normal';
+}
+
+function statusClassName(status) {
+  const normalized = normalizeKey(status);
+  if (normalized === 'semestoque') {
+    return 'status-sem-estoque';
+  }
+  if (normalized === 'estoquebaixo') {
+    return 'status-baixo';
+  }
+  if (normalized === 'estoquecritico') {
+    return 'status-critico';
+  }
+  if (normalized === 'estoquealto') {
+    return 'status-alto';
+  }
+  return 'status-normal';
+}
+
+function render() {
+  const monthBuckets = getMonthBuckets();
+  elements.monthHeader0.textContent = formatMonthLabel(monthBuckets[0]);
+  elements.monthHeader1.textContent = formatMonthLabel(monthBuckets[1]);
+  elements.monthHeader2.textContent = formatMonthLabel(monthBuckets[2]);
+  elements.monthsLabel.textContent = monthBuckets.map(formatMonthLabel).join(' | ');
+
+  if (!state.products.length) {
+    elements.tableBody.innerHTML =
+      '<tr><td colspan="15" class="empty-state">Nenhuma leitura consolidada ainda.</td></tr>';
+    updateKpis([]);
+    return;
+  }
+
+  elements.tableBody.innerHTML = state.products
+    .map((product) => {
+      return `
+        <tr>
+          <td>${escapeHtml(product.code)}</td>
+          <td>${escapeHtml(product.sku)}</td>
+          <td>${escapeHtml(product.name)}</td>
+          <td>${escapeHtml(product.brand)}</td>
+          <td>${formatNumber(product.currentStock)}</td>
+          <td>${formatNumber(product.reservedStock)}</td>
+          <td>${formatNumber(product.availableStock)}</td>
+          <td>${formatNumber(product.monthlySales[0])}</td>
+          <td>${formatNumber(product.monthlySales[1])}</td>
+          <td>${formatNumber(product.monthlySales[2])}</td>
+          <td>${formatNumber(product.projection)}</td>
+          <td>${formatNumber(product.averageSales)}</td>
+          <td>${formatNumber(product.coverage)}</td>
+          <td>${formatNumber(product.need)}</td>
+          <td><span class="status-pill ${statusClassName(product.status)}">${escapeHtml(product.status)}</span></td>
+        </tr>
+      `;
+    })
+    .join('');
+
+  updateKpis(state.products);
+}
+
+function updateKpis(products) {
+  const productCount = products.length;
+  const totalStock = products.reduce((sum, product) => sum + product.currentStock, 0);
+  const currentSales = products.reduce((sum, product) => sum + product.monthlySales[2], 0);
+  const projection = products.reduce((sum, product) => sum + product.projection, 0);
+  const noStock = products.filter((product) => product.availableStock <= 0).length;
+  const lowStock = products.filter((product) => product.status === 'Estoque baixo' || product.status === 'Estoque critico').length;
+
+  elements.kpiProducts.textContent = formatNumber(productCount);
+  elements.kpiStock.textContent = formatNumber(totalStock);
+  elements.kpiCurrentSales.textContent = formatNumber(currentSales);
+  elements.kpiProjection.textContent = formatNumber(projection);
+  elements.kpiNoStock.textContent = formatNumber(noStock);
+  elements.kpiLowStock.textContent = formatNumber(lowStock);
+}
+
+function formatNumber(value) {
+  return NUMBER_FORMATTER.format(Number(value || 0));
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function setMessage(text, tone) {
+  elements.messageBox.textContent = text;
+  elements.messageBox.className = `message ${tone}`;
+}
+
+async function processFiles() {
+  const stockFile = elements.stockFile.files[0];
+  const salesFile = elements.salesFile.files[0];
+
+  if (!stockFile || !salesFile) {
+    setMessage('Selecione as duas planilhas antes de processar.', 'error');
+    return;
+  }
+
+  try {
+    setMessage('Lendo planilhas e consolidando base...', 'info');
+    const [rawStockRows, rawSalesRows] = await Promise.all([readFileRows(stockFile), readFileRows(salesFile)]);
+    state.stockRows = parseStockRows(rawStockRows);
+    state.salesRows = parseSalesRows(rawSalesRows);
+    state.products = consolidateProducts(state.stockRows, state.salesRows);
+
+    if (!state.products.length) {
+      setMessage('As planilhas foram lidas, mas nenhuma linha valida foi consolidada. Verifique os nomes das colunas.', 'error');
+      render();
+      return;
+    }
+
+    setMessage(
+      `Leitura concluida: ${state.stockRows.length} linhas de estoque, ${state.salesRows.length} linhas de vendas e ${state.products.length} produtos consolidados.`,
+      'success'
+    );
+    render();
+  } catch (error) {
+    console.error(error);
+    setMessage(`Falha ao processar as planilhas: ${error.message}`, 'error');
+  }
+}
+
+function clearAll() {
+  elements.stockFile.value = '';
+  elements.salesFile.value = '';
+  state.stockRows = [];
+  state.salesRows = [];
+  state.products = [];
+  setMessage('Leitura limpa. Envie novas planilhas para processar.', 'info');
+  render();
+}
+
+elements.processButton.addEventListener('click', processFiles);
+elements.clearButton.addEventListener('click', clearAll);
+
+render();
